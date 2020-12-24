@@ -23,8 +23,7 @@ npm install ghost-cli@latest -g
 systemctl enable ufw
 systemctl start ufw
 
-# ufw 有効化のためインストール
-# expectは内部処理に癖があるため、pexpectを使う。
+# because expect is complex, you use pexpect
 apt install -y expect
 apt install -y python3-pip
 pip3 install pexpect
@@ -56,7 +55,7 @@ apt-get -y install mariadb-server
 systemctl enable mariadb
 systemctl start mariadb
 
-MYSQL_ROOT_PASSWORD="elg5nuZsbahm0,bpxixO"
+MYSQL_ROOT_PASSWORD=`pwmake 128`
 
 python3 << END
 import pexpect
@@ -90,6 +89,11 @@ prc.sendline("Y")
 prc.expect( pexpect.EOF )
 END
 
+# root
+echo '# set mariadb environment variable'  >> ~/.bash_profile
+echo export MYSQL_ROOT_PASSWORD=\"$MYSQL_ROOT_PASSWORD\" >> ~/.bash_profile
+echo '' >> ~/.bash_profile
+
 # CREATE ROLE DBADMIN.
 # this role has all priviledge except Server administration inpacting database system.
 # see official document.[Mysql oracle document](https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html)
@@ -101,7 +105,6 @@ END
 
 # CREATE USER connecting from local network.
 MYSQL_USER=ghost
-MYSQL_USER_PASSWORD="28gwZmjjbfpMmzd@tigm"
 MYSQL_USER_PASSWORD=`pwmake 128`
 MYSQL_DB=ghost
 mysql << END
@@ -116,8 +119,10 @@ CREATE DATABASE $MYSQL_DB;
 GRANT ALL ON $MYSQL_DB.* to $MYSQL_USER;
 END
 
-# これがなぜか使えない。
-# ~"$user"
+
+echo '# set mariadb environment variable'  >> /home/$user/.bash_profile
+echo export MYSQL_USER_PASSWORD=\"$MYSQL_USER_PASSWORD\" >> /home/$user/.bash_profile
+echo '' >> /home/$user/.bash_profile
 
 # Create directory: Change `sitename` to whatever you like
 mkdir -p /var/www/$sitename
@@ -173,25 +178,9 @@ prc.sendline("Y")
 prc.expect("Do you want to start Ghost")
 prc.sendline("Y")
 
-prc.expect("Reload privilege tables now")
-prc.sendline("Y")
-
 prc.expect( pexpect.EOF )
 EOF
 END
-
-# # install postgresql dataafile and clustor to /var/lib/pgsql/data
-# su - postgres -c 'pg_ctl initdb'
-
-# # update postgresql use memory,postgresql_log,style
-# sed -i 's/^shared_buffers.*$/shared_buffers = 1024MB                 # min 128kB/' /var/lib/pgsql/data/postgresql.conf
-# sed -i "s/^log_filename.*$/log_filename = 'postgresql-%Y-%m-%d.log'    # log file name pattern,/" /var/lib/pgsql/data/postgresql.conf
-
-# echo "===> you want to "
-
-# echo "you CREATE DATABASE dependending your locale data, you use these options"
-# echo "LC_COLLATE [=] lc_collate"
-# echo "LC_CTYPE [=] lc_ctype" 
 
 
 # erase fragtation funciton. this function you use vagrant package.
@@ -204,5 +193,7 @@ END
 
 echo "finish install!"
 
+echo "MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD"
 echo "MYSQL_USER_PASSWORD: $MYSQL_USER_PASSWORD"
+
 reboot
